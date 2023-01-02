@@ -206,7 +206,14 @@ void set_task(uint32_t user_task){
 ** This function allows to save contexte.
 */
 void scheduler(){
-    
+    debug("Record contexte.\n");
+    asm("handler_scheduler:\n");
+    // Record contexte of the task 
+    asm("pusha\n");
+    // Code of interruption
+    asm("call change_task\n");
+    // Restor register
+    asm("popa\n");
     // Return traiter l’interruption 3/ Restaurer les registres (popa), 4/ Retourner là où on était (iret)
     //asm("iret\n");
     debug("Repeat..\n");
