@@ -42,10 +42,6 @@ __attribute__((section(".user2"))) void print_counter(){
 ** Pagination
 ** This function creates one pgd and 2 ptb of 1024 entries.
 */
-/*
-** Pagination
-** This function creates one pgd and 2 ptb of 1024 entries.
-*/
 void set_mapping(pde32_t *pgd, pte32_t *first_ptb, unsigned int flags){
     // Define pgd
     memset(pgd, 0, PAGE_SIZE);
@@ -101,42 +97,6 @@ void init_seg_desc(uint64_t limit, uint64_t base, uint64_t type, uint64_t dpl, u
 
     set_gdtr(gdtr);
 }
-/*
-** Initialisation of segment descriptor.
-*/
-void init_seg_desc(uint64_t limit, uint64_t base, uint64_t type, uint64_t dpl, uint64_t index){
-    gdt_reg_t gdtr;
-    get_gdtr(gdtr);
-    
-    gdt[index].raw = 0ULL;
-    gdt[index].base_1 = base;
-    gdt[index].base_2 = base >> 16;
-    gdt[index].base_3 = base >> 24;
-    gdt[index].limit_1 = limit;
-    gdt[index].limit_2 = limit >> 16;
-    gdt[index].type = type;
-    gdt[index].dpl = dpl;
-    // Define the tss segment descriptor
-    if (type == SEG_DESC_SYS_TSS_AVL_32){ 
-        gdt[index].s = 0; 
-        gdt[index].p = 1;
-        gdt[index].avl = 0;
-        gdt[index].l = 0;
-        gdt[index].d = 0;
-        gdt[index].g = 0;
-    }
-    else {
-        gdt[index].s = 1; 
-        gdt[index].p = 1;
-        gdt[index].avl = 0;
-        gdt[index].l = 0;
-        gdt[index].d = 1;
-        gdt[index].g = 1;
-    }
-    gdtr.limit = gdtr.limit + sizeof(seg_desc_t);
-
-    set_gdtr(gdtr);
-}
 
 /*
 ** Define kernel
@@ -154,7 +114,7 @@ void set_kernel(){
     init_seg_desc(0xfffff,0,SEG_DESC_CODE_XR,3, 3);  
     init_seg_desc(0xfffff,0,SEG_DESC_DATA_RW,3, 4); 
 
-    // Record TSS in the gdt 
+    // Record TSS in the gdt even if we will not achieve to use it
     init_seg_desc(0xfffff,0,SEG_DESC_SYS_TSS_AVL_32,3, 4);
 	
     // Initialisation of registres in gdt
