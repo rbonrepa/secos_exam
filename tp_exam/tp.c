@@ -201,6 +201,27 @@ void set_task(uint32_t user_task){
     pg_set_entry(&ptb_shared[0], PG_USR | PG_RW, page_nr(SHARED_MEMORY)); // Pointe vers une même adresse
 }
 
+/*
+** This function allows to create idtr and register the thow handlers below.
+** Then we strat the interruption at the index 32.
+*/
+void start_tasks(){
+    // Define idt
+    idt_reg_t idtr;
+    get_idtr(idtr);
+    int_desc_t *idt = idtr.desc; //tableau comportant au maximum 256 descripteurs de 8 octets chacun, soit un descripteur par interruption. 
+
+    // Record handler for scheduler in idt.
+    int_desc(&idt[32], gdt_krn_seg_sel(RING0_CODE), (offset_t)scheduler);
+    idt[32].dpl = SEG_SEL_USR;
+
+    // Record handler for syscall in idt.
+    int_desc(&idt[0x80], gdt_krn_seg_sel(RING0_CODE), (offset_t)syscall);
+    idt[0x80].dpl = SEG_SEL_USR; 
+
+    // Start
+    asm volatile("int $32;\n");  
+}
 
 void tp(){
     debug("|------   Work demonstration   ------|\n");
@@ -215,7 +236,7 @@ void tp(){
     set_task((uint32_t)print_counter);
     
     // Start task: init idt and records handlers
-    
+    start_tasks(); 
     
     debug("\n|------------     Fin     -----------|\n");
 
