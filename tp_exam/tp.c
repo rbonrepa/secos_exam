@@ -233,8 +233,8 @@ void tp(){
     
     // Start task: init idt and records handlers
     start_tasks(); 
-    
     debug("\n|------------     Fin     -----------|\n");
+    debug("\nNous avons réalisé la pagination et la segmentation pour le noyau.\n Nous avons aussi crée les taches user avec leur propre PGD/PTB/kernel_stack.\n Nous avons mis en place une IDT et enregistré les handlers mais nous n'avons pas réussi à organiser l'ordonnancement de l'execution des taches.");
 
     while(1);
 }
