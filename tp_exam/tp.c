@@ -170,15 +170,50 @@ void set_kernel(){
     // Enable paging 
     set_cr3(KERNEL_PGD);
 }
+
+/*
+** Define tasks
+** This function allows to create one task with pgd/ptb, kernel stack and add the task to the shared memory.
+*/
+void set_task(uint32_t user_task){
+    // Create and record the task
+    tasks[number_tasks] = user_task;
+    number_tasks++;
+
+    // Set the kernel stack
+    uint32_t *user_kernel_esp = (uint32_t *)(user_task + USER_KERNEL_STACK_START_OFFSET);
+    *(user_kernel_esp - 1) = gdt_usr_seg_sel(RING3_DATA);   // SS
+    *(user_kernel_esp - 2) = user_task + USER_STACK_START_OFFSET; // ESP
+    *(user_kernel_esp - 3) = EFLAGS_IF;                           // Flags
+    *(user_kernel_esp - 4) = gdt_usr_seg_sel(RING3_CODE);   // CS
+    *(user_kernel_esp - 5) = user_task;                           // EIP
+
+    print_stack_tasks(user_kernel_esp, number_tasks);
+    
+    // Set pagination for the task
+    pde32_t *pgd_task = (pde32_t *)(user_task + USER_PGD_OFFSET);
+    pte32_t *ptb_task = (pte32_t *)(user_task + USER_PTB_OFFSET);
+    set_mapping(pgd_task, ptb_task, PG_USR | PG_RW);
+
+    // Create the shared memory
+    pte32_t *ptb_shared = (pte32_t *)(user_task + USER_PTB_OFFSET + 2 * 4096);
+    pg_set_entry(&pgd_task[2], PG_USR | PG_RW, page_nr(ptb_shared)); // pgd[0] = ptb1, pgd[1] = ptb2, pgd[2] = ptb_shared
+    pg_set_entry(&ptb_shared[0], PG_USR | PG_RW, page_nr(SHARED_MEMORY)); // Pointe vers une même adresse
+}
+
+
 void tp(){
     debug("|------   Work demonstration   ------|\n");
     print_memory_cartography(idtr, (uint32_t)increment_counter, (uint32_t)print_counter);
 
     // Set up kernel: init gdt, tss, register and pagination
+    set_kernel();
+    set_cr0(get_cr0() | CR0_PG | CR0_PE);
 
     // Set up 2 tasks: init pagination, kernel stack and shared memory
-
-    	
+    set_task((uint32_t)increment_counter);
+    set_task((uint32_t)print_counter);
+    
     // Start task: init idt and records handlers
     
     
