@@ -104,7 +104,72 @@ void init_seg_desc(uint64_t limit, uint64_t base, uint64_t type, uint64_t dpl, u
 /*
 ** Initialisation of segment descriptor.
 */
+void init_seg_desc(uint64_t limit, uint64_t base, uint64_t type, uint64_t dpl, uint64_t index){
+    gdt_reg_t gdtr;
+    get_gdtr(gdtr);
+    
+    gdt[index].raw = 0ULL;
+    gdt[index].base_1 = base;
+    gdt[index].base_2 = base >> 16;
+    gdt[index].base_3 = base >> 24;
+    gdt[index].limit_1 = limit;
+    gdt[index].limit_2 = limit >> 16;
+    gdt[index].type = type;
+    gdt[index].dpl = dpl;
+    // Define the tss segment descriptor
+    if (type == SEG_DESC_SYS_TSS_AVL_32){ 
+        gdt[index].s = 0; 
+        gdt[index].p = 1;
+        gdt[index].avl = 0;
+        gdt[index].l = 0;
+        gdt[index].d = 0;
+        gdt[index].g = 0;
+    }
+    else {
+        gdt[index].s = 1; 
+        gdt[index].p = 1;
+        gdt[index].avl = 0;
+        gdt[index].l = 0;
+        gdt[index].d = 1;
+        gdt[index].g = 1;
+    }
+    gdtr.limit = gdtr.limit + sizeof(seg_desc_t);
 
+    set_gdtr(gdtr);
+}
+
+/*
+** Define kernel
+** This function allows to initialise gdt, tss, registers, and pagination.
+*/
+void set_kernel(){
+    // Initialisaion of gdt
+    gdt_reg_t gdtr;
+    gdtr.limit = 0;
+    gdtr.desc = gdt;
+    set_gdtr(gdtr);
+    init_seg_desc(0,0,0,0, 0);
+    init_seg_desc(0xfffff,0,SEG_DESC_CODE_XR,0, 1); 
+    init_seg_desc(0xfffff,0,SEG_DESC_DATA_RW,0, 2);  
+    init_seg_desc(0xfffff,0,SEG_DESC_CODE_XR,3, 3);  
+    init_seg_desc(0xfffff,0,SEG_DESC_DATA_RW,3, 4); 
+
+    // Record TSS in the gdt 
+    init_seg_desc(0xfffff,0,SEG_DESC_SYS_TSS_AVL_32,3, 4);
+	
+    // Initialisation of registres in gdt
+    set_cs(gdt_krn_seg_sel(RING0_CODE));
+    set_ss(gdt_krn_seg_sel(RING0_DATA));
+    set_ds(gdt_krn_seg_sel(RING0_DATA));
+    set_es(gdt_krn_seg_sel(RING0_DATA));
+    set_fs(gdt_krn_seg_sel(RING0_DATA));
+    set_gs(gdt_krn_seg_sel(RING0_DATA));
+
+    // Activation of pagination for kenerl
+    set_mapping((pde32_t *)KERNEL_PGD, (pte32_t *)KERNEL_PTB, PG_KRN | PG_RW);
+    // Enable paging 
+    set_cr3(KERNEL_PGD);
+}
 void tp(){
     debug("|------   Work demonstration   ------|\n");
     print_memory_cartography(idtr, (uint32_t)increment_counter, (uint32_t)print_counter);
