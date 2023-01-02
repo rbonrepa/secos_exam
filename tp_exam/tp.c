@@ -202,6 +202,35 @@ void set_task(uint32_t user_task){
 }
 
 /*
+** Kernel interruptions
+** This function allows to save contexte.
+*/
+void scheduler(){
+    
+    // Return traiter l’interruption 3/ Restaurer les registres (popa), 4/ Retourner là où on était (iret)
+    //asm("iret\n");
+    debug("Repeat..\n");
+}
+/*
+** This function allows to change task (task1->task2 and reverse).
+*/
+void change_task(){
+    debug("Change task.\n");
+    
+    // For task 1, increment counter
+    debug("Task 1:\n    Increment the counter in the shared memory.\n    To do ...\n");
+
+    // For task 2, Print counter with syscall
+    asm volatile("int $0x80;\n");  
+}
+/*
+** This function allows to print the task 2 with a syscall.
+*/
+void syscall(){
+    debug("Syscall interruption (80): \n    Print the value of the counter in the sharred memory.\n    To do...\n");
+}
+
+/*
 ** This function allows to create idtr and register the thow handlers below.
 ** Then we strat the interruption at the index 32.
 */
